@@ -1,25 +1,55 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState, createContext } from "react";
+import axios from "axios";
+import "./App.css";
+import Card from "./components/Card";
+import CardFocus from "./components/CardFocus";
 
+export const FocusContext = createContext(null);
 function App() {
+  const [data, setData] = useState([]);
+  const [selectedCard, setSelectedCard] = useState(null);
+
+  const onCardClick = (user) => {
+    setSelectedCard(user);
+  };
+  const onBgClick = () => {
+    setSelectedCard(null);
+  };
+  const getData = async () => {
+    try {
+      const [userResponse, photoResponse] = await Promise.all([
+        axios.get("https://jsonplaceholder.typicode.com/users"),
+        axios.get("https://picsum.photos/v2/list"),
+      ]);
+
+      const users = userResponse.data;
+      const photos = photoResponse.data;
+      const combinedData = users.map((user) => {
+        const photo = photos.find((photo) => photo.id === user.id.toString());
+        return {
+          ...user,
+          photoUrl: photo ? photo.download_url : "",
+        };
+      });
+      setData(combinedData);
+    } catch (err) {
+      console.error("Error fetching data", err);
+    }
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <FocusContext.Provider value={{ onBgClick, onCardClick, selectedCard }}>
+      <div className="App">
+        {data.map((user, id) => {
+          return <Card user={user} key={id} />;
+        })}
+        <CardFocus />
+      </div>
+    </FocusContext.Provider>
   );
 }
-
 export default App;
